@@ -132,5 +132,102 @@ def database_as_dict() -> dict:
     }
 
 
+def supply_database_fixture() -> Database:
+    return parse({
+        ('database', '1.0'): [
+            {
+                'name': 'A',
+                'exchanges': [
+                    {
+                        'name': 'A',
+                        'type': 'production',
+                        'quantity': Quantity(1, kWh),
+                        'allocation': 1
+                    }
+                ]
+            },
+            {
+                'name': 'B',
+                'exchanges': [
+                    {
+                        'name': 'B',
+                        'type': 'production',
+                        'quantity': Quantity(1, kg),
+                        'allocation': 0.5
+                    },
+                    {
+                        'name': 'A',
+                        'type': 'technosphere',
+                        'quantity': Quantity(4.0, kWh)
+                    }
+                ]
+            },
+            {
+                'name': 'C',
+                'exchanges': [
+                    {
+                        'name': 'C',
+                        'type': 'production',
+                        'quantity': Quantity(4, metric_ton),
+                        'allocation': 1
+                    },
+                    {
+                        'name': 'A',
+                        'type': 'technosphere',
+                        'quantity': Quantity(1.0, kWh)
+                    },
+                    {
+                        'name': 'B',
+                        'type': 'technosphere',
+                        'quantity': Quantity(200.0, kg)
+                    }
+                ]
+            },
+            {
+                'name': 'D',
+                'exchanges': [
+                    {
+                        'name': 'D',
+                        'type': 'production',
+                        'quantity': Quantity(1, MWh),
+                        'allocation': 1
+                    },
+                    {
+                        'name': 'A',
+                        'type': 'technosphere',
+                        'quantity': Quantity(1.0, kWh)
+                    },
+                    {
+                        'name': 'B',
+                        'type': 'technosphere',
+                        'quantity': Quantity(2.0, metric_ton)
+                    },
+                    {
+                        'name': 'D',
+                        'type': 'technosphere',
+                        'quantity': Quantity(0.5, MWh)
+                    }
+                ]
+            },
+            {
+                'name': 'E',
+                'exchanges': [
+                    {
+                        'name': 'E',
+                        'type': 'production',
+                        'quantity': Quantity(1, kg),
+                        'allocation': 1
+                    },
+                    {
+                        'name': 'A',
+                        'type': 'technosphere',
+                        'quantity': Quantity(1.0, MWh)
+                    }
+                ]
+            },
+        ]
+    })
+
+
 def database() -> Database:
     return parse(database_as_dict())
