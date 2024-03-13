@@ -19,18 +19,18 @@ def expected_activity_domain(database):
 
 class TestLcaSystem(TestCase):
 
-    def test_lca_system__technosphere_matrix__domains(self):
+    def test_technosphere_matrix__should_have_correct_domains(self):
         database = model_fixture.database()
         matrix = LcaSystem(database).technosphere_matrix
 
         self.assertEqual(matrix.input_domain, matrix.output_domain)
-        self.assertEqual(matrix.input_domain.indices, expected_activity_domain(database))
+        self.assertEqual(matrix.input_domain._indices, expected_activity_domain(database))
 
-    def test_lca_system__technosphere_matrix__values(self):
+    def test_technosphere_matrix__should_have_correct_array(self):
         database = model_fixture.database()
         matrix = LcaSystem(database).technosphere_matrix
 
-        self.assertFalse((matrix.values - np.array([
+        self.assertFalse((matrix.array - np.array([
             [3.6e9, 0, 0, 0, 0, 0],
             [-0.2 * 3.6e6, 1, 0, -2, 0, 0],
             [0, 0, 1e4, 0, 0, 0],
@@ -39,23 +39,23 @@ class TestLcaSystem(TestCase):
             [0, -10, -500 * 1e4, 0, -50, 300],
         ])).any())
 
-    def test_lca_system__biosphere_matrix__domains(self):
+    def test_biosphere_matrix__should_have_correct_domains(self):
         database = model_fixture.database()
         matrix = LcaSystem(database).biosphere_matrix
 
-        self.assertEqual(matrix.input_domain.indices, expected_activity_domain(database))
-        self.assertEqual(matrix.output_domain.indices, {
+        self.assertEqual(matrix.input_domain._indices, expected_activity_domain(database))
+        self.assertEqual(matrix.output_domain._indices, {
             (database.name, database.version, 'carbon dioxide'): 0,
             (database.name, database.version, 'dinitrogen monoxide'): 1,
             (database.name, database.version, 'water'): 2,
         })
 
-    def test_lca_system__biosphere_matrix__values(self):
+    def test_biosphere_matrix__should_have_correct_array(self):
         database = model_fixture.database()
         matrix = LcaSystem(database).biosphere_matrix
 
-        self.assertEqual(matrix.values.shape, (6, 3))
-        self.assertFalse((matrix.values - np.array([
+        self.assertEqual(matrix.array.shape, (6, 3))
+        self.assertFalse((matrix.array - np.array([
             [5, 0, 0],
             [0, 0, 0],
             [6, 0, 0],

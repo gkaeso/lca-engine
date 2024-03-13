@@ -1,10 +1,11 @@
 from quantities import Quantity, kg, m, ha, kWh, MWh, metric_ton
 
 from model import Database
+from parser import parse
 
 
-def database() -> Database:
-    return Database.from_dict({
+def database_as_dict() -> dict:
+    return {
         ('database', '1.0'): [
             {
                 'name': 'wheat',
@@ -128,4 +129,8 @@ def database() -> Database:
                 ]
             }
         ]
-    })
+    }
+
+
+def database() -> Database:
+    return parse(database_as_dict())

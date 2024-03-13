@@ -8,6 +8,10 @@ from model import Product, Substance
 
 class TestProduct(TestCase):
 
+    def test_hashable(self):
+        product = Product('product', Quantity(1.0, kg), 1.0)
+        self.assertEqual({product, product}, {product})
+
     def test_equal(self):
         self.assertEqual(Product('product', Quantity(1.0, kg), 1.0),
                          Product('product', Quantity(1.0, kg), 1.0))
@@ -18,22 +22,22 @@ class TestProduct(TestCase):
         self.assertEqual(hash(substance), hash(product))
         self.assertNotEqual(product, substance)
 
-    def test_hashable(self):
-        product = Product('product', Quantity(1.0, kg), 1.0)
-        self.assertEqual({product, product}, {product})
-
 
 class TestSubstance(TestCase):
-
-    def test_equal(self):
-        self.assertEqual(Substance('water'), Substance('water'))
 
     def test_hashable(self):
         substance = Substance('water')
         self.assertEqual({substance, substance}, {substance})
 
+    def test_equal(self):
+        self.assertEqual(Substance('water'), Substance('water'))
+
 
 class TestDatabase(TestCase):
+
+    def test_key(self):
+        database = model_fixture.database()
+        self.assertEqual(database.key, (database.name, database.version))
 
     def test_sorted_activities(self):
         database = model_fixture.database()

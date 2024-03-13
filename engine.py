@@ -1,6 +1,7 @@
 from collections import namedtuple
 from dataclasses import dataclass
 from sys import executable
+from typing import Self
 
 import numpy as np
 
@@ -11,16 +12,23 @@ type ProductKey = namedtuple('ProductKey', ['database', 'version', 'name'])
 type Key = ProductKey
 
 
-@dataclass
 class Domain:
-    indices: dict[ProductKey, int]
-    elements: dict[ProductKey, Characterizable]
+    _indices: dict[ProductKey, int]
+    _elements: dict[ProductKey, Characterizable]
+
+    def __init__(self, indices: dict[ProductKey, int], elements: dict[ProductKey, Characterizable]):
+        self._indices = indices
+        self._elements = elements
+
+    @property
+    def indexed_elements(self) -> list[tuple[int, Characterizable]]:
+        return [(self._indices[key], self._elements[key]) for key in self._indices.keys()]
 
     def index(self, key: ProductKey) -> int:
-        return self.indices[key]
+        return self._indices[key]
 
     def __len__(self) -> int:
-        return len(self.indices)
+        return len(self._indices)
 
 
 def domain_from(database: Database, func: executable) -> Domain:
@@ -37,7 +45,10 @@ def domain_from(database: Database, func: executable) -> Domain:
 class Matrix:
     input_domain: Domain
     output_domain: Domain
-    values: np.array
+    array: np.array
+
+    def __mul__(self, other: Self) -> Self:
+        return Matrix(self.input_domain, other.output_domain, np.dot(self.array, other.array))
 
 
 def _arrays(database: Database, product_domain: Domain, substance_domain: Domain) -> tuple[np.ndarray, np.ndarray]:
