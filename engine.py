@@ -54,8 +54,8 @@ class Matrix:
 
 def _arrays(database: Database, product_domain: Domain, substance_domain: Domain) -> tuple[np.ndarray, np.ndarray]:
     product_size = len(product_domain)
-    biosphere_array = np.zeros((product_size, len(substance_domain)), dtype=np.int64)
-    technosphere_array = np.zeros((product_size, product_size), dtype=np.int64)
+    biosphere_array = np.zeros((product_size, len(substance_domain)), dtype=np.float64)
+    technosphere_array = np.zeros((product_size, product_size), dtype=np.float64)
 
     for product, biosphere_exchanges, technosphere_exchanges in [(product, activity.biosphere, activity.technosphere)
                                                                  for activity in database.activities
@@ -65,7 +65,7 @@ def _arrays(database: Database, product_domain: Domain, substance_domain: Domain
 
         for exchange in biosphere_exchanges:
             col = substance_domain.index((database.name, database.version, exchange.name))
-            biosphere_array[row][col] = float(exchange.quantity.simplified) * product.allocation
+            biosphere_array[row][col] += float(exchange.quantity.simplified) * product.allocation
 
         technosphere_array[row][row] += float(product.quantity.simplified)
         for exchange in technosphere_exchanges:
@@ -75,7 +75,7 @@ def _arrays(database: Database, product_domain: Domain, substance_domain: Domain
     return biosphere_array, technosphere_array
 
 
-class LcaSystem:
+class System:
     biosphere_matrix: Matrix
     technosphere_matrix: Matrix
 
@@ -107,21 +107,21 @@ class _IdentityOperator(_Operator):
 
     @override
     def operate(self) -> Matrix:
-        return Matrix(self.input_domain, self.output_domain, np.identity(len(self.input_domain), dtype=np.int64))
+        return Matrix(self.input_domain, self.output_domain, np.identity(len(self.input_domain), dtype=np.float64))
 
 
 class _SupplyOperator(_Operator):
-    _matrix: Matrix
+    _technosphere_matrix: Matrix
 
     def __init__(self, technosphere_matrix: Matrix):
         super().__init__(technosphere_matrix.input_domain, technosphere_matrix.output_domain)
-        self._matrix = technosphere_matrix
+        self._technosphere_matrix = technosphere_matrix
 
     def _reference_amount_array(self) -> np.ndarray:
-        input_domain = self._matrix.input_domain
+        input_domain = self.input_domain
         size = len(input_domain)
 
-        array = np.zeros((size, size), dtype=np.int64)
+        array = np.zeros((size, size), dtype=np.float64)
         for index, element in input_domain.indexed_elements:
             array[index][index] = float(element.quantity.simplified)
 
@@ -129,8 +129,20 @@ class _SupplyOperator(_Operator):
 
     @override
     def operate(self) -> Matrix:
-        array = np.add(self._reference_amount_array(), np.negative(self._matrix.array))
-        return Matrix(self._matrix.input_domain, self._matrix.output_domain, array)
+        array = np.add(self._reference_amount_array(), np.negative(self._technosphere_matrix.array))
+        return Matrix(self.input_domain, self.output_domain, array)
+
+
+class _InventoryOperator(_Operator):
+    _biosphere_matrix: Matrix
+
+    def __init__(self, system: System):
+        super().__init__(system.technosphere_matrix.input_domain, system.biosphere_matrix.output_domain)
+        self._biosphere_matrix = system.biosphere_matrix
+
+    @override
+    def operate(self) -> Matrix:
+        return self._biosphere_matrix
 
 
 class _OperatorValidator:
@@ -141,12 +153,12 @@ class _OperatorValidator:
 
 
 class OperatorChain:
-    _system: LcaSystem
+    _system: System
     _input_domain: Domain
     _output_domain: Domain
     _operators: list[_Operator]
 
-    def __init__(self, system: LcaSystem):
+    def __init__(self, system: System):
         self._system = system
         self._input_domain = self._system.technosphere_matrix.input_domain
         self._output_domain = self._system.technosphere_matrix.output_domain
@@ -158,6 +170,12 @@ class OperatorChain:
         self._operators.append(operator)
         return self
 
+    def inventory(self) -> Self:
+        operator = _InventoryOperator(self._system)
+        _OperatorValidator.validate(self._operators[-1], operator)
+        self._operators.append(operator)
+        return self
+
     def solve(self) -> Matrix:
         rhs = self._combine_operators()
         return Matrix(rhs.input_domain, rhs.output_domain,
@@ -165,9 +183,6 @@ class OperatorChain:
 
     def __len__(self) -> int:
         return len(self._operators)
-
-    def _is_compatible_with_previous_operator(self, operator: _Operator) -> bool:
-        return operator.input_domain is self._operators[-1].output_domain
 
     def _combine_operators(self) -> Matrix:
         return reduce(lambda m1, m2: m1 * m2,

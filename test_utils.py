@@ -14,5 +14,5 @@ def _almost_equal(array: np.ndarray, reference: np.ndarray, rel_error: float) ->
 
 
 # using custom almost_equal function because the one from numpy has too restrictive checks
-def almost_equal(array1: np.ndarray, array2: np.ndarray, rel_error: float = 0.01) -> bool:
+def almost_equal(array1: np.ndarray, array2: np.ndarray, rel_error: float = 1e-8) -> bool:
     return array1.shape == array2.shape and _almost_equal(array1, array2, rel_error)

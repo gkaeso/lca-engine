@@ -36,11 +36,11 @@ class TestSubstance(TestCase):
 class TestDatabase(TestCase):
 
     def test_key(self):
-        database = model_fixture.database()
+        database = model_fixture.complex_realistic_database()
         self.assertEqual(database.key, (database.name, database.version))
 
     def test_sorted_activities(self):
-        database = model_fixture.database()
+        database = model_fixture.complex_realistic_database()
         self.assertEqual([p.name for p in database.sorted_products()], [
             'electricity',
             'fertiliser',
@@ -51,7 +51,7 @@ class TestDatabase(TestCase):
         ])
 
     def test_sorted_substances(self):
-        database = model_fixture.database()
+        database = model_fixture.complex_realistic_database()
         self.assertEqual([s.name for s in database.sorted_substances()], [
             'carbon dioxide',
             'dinitrogen monoxide',

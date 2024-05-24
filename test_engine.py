@@ -4,137 +4,12 @@ import numpy as np
 from quantities import Quantity, kg
 
 import model_fixture
-from engine import LcaSystem, Domain, Matrix, OperatorChain, _Operator, _OperatorValidator
-from model import Product, Database
+from engine import System, Domain, OperatorChain, _Operator, _OperatorValidator
+from model import Product
 from test_utils import almost_equal
 
 
-def expected_activity_domain(database):
-    return {
-        (*database.key, 'electricity'): 0,
-        (*database.key, 'fertiliser'): 1,
-        (*database.key, 'land transformation'): 2,
-        (*database.key, 'phosphate, at mine'): 3,
-        (*database.key, 'wheat grain'): 4,
-        (*database.key, 'wheat straw'): 5
-    }
-
-
-class TestDomain(TestCase):
-
-    def test_indexed_elements(self):
-        database = Database('name', '1.0', [])
-
-        product1 = Product('product 1', Quantity(1.0, kg), 0.9)
-        product2 = Product('product 2', Quantity(3.0, kg), 1.0)
-
-        key1 = (*database.key, product1.name)
-        key2 = (*database.key, product2.name)
-
-        domain = Domain({key1: 1, key2: 2},
-                        {key1: product1, key2: product2})
-
-        self.assertEqual(domain.indexed_elements, [(1, product1), (2, product2)])
-
-
-class TestMatrix(TestCase):
-    database = Database('name', '1.0', [])
-
-    product1 = Product('product 1', Quantity(1.0, kg), 0.9)
-    product2 = Product('product 2', Quantity(3.0, kg), 1.0)
-    product3 = Product('product 3', Quantity(5.0, kg), 2.0)
-
-    key1 = (*database.key, product1.name)
-    key2 = (*database.key, product2.name)
-    key3 = (*database.key, product2.name)
-
-    domain1 = Domain({key1: 1, key2: 2},
-                     {key1: product1, key2: product2})
-
-    domain2 = Domain({key1: 1, key2: 2, key3: 3},
-                     {key1: product1, key2: product2, key3: product3})
-
-    def test_multiply__should_have_correct_domains(self):
-        a = Matrix(self.domain1, self.domain1, np.array([
-            [1.0, 2.0],
-            [3.0, 0.5]
-        ]))
-
-        b = Matrix(self.domain1, self.domain2, np.array([
-            [4.0, 2.0],
-            [1.0, 2.0]
-        ]))
-
-        c = a * b
-
-        self.assertEqual(c.input_domain, self.domain1)
-        self.assertEqual(c.output_domain, self.domain2)
-
-    def test_multiply__should_have_correct_array(self):
-        a = Matrix(self.domain1, self.domain1, np.array([
-            [1.0, 2.0],
-            [3.0, 0.5]
-        ]))
-
-        b = Matrix(self.domain1, self.domain2, np.array([
-            [4.0, 2.0],
-            [1.0, 2.0]
-        ]))
-
-        c = a * b
-
-        self.assertFalse((c.array - np.dot(a.array, b.array)).any())
-
-
-class TestLcaSystem(TestCase):
-
-    def test_technosphere_matrix__should_have_correct_domains(self):
-        database = model_fixture.database()
-        matrix = LcaSystem(database).technosphere_matrix
-
-        self.assertEqual(matrix.input_domain, matrix.output_domain)
-        self.assertEqual(matrix.input_domain._indices, expected_activity_domain(database))
-
-    def test_technosphere_matrix__should_have_correct_array(self):
-        database = model_fixture.database()
-        matrix = LcaSystem(database).technosphere_matrix
-
-        self.assertFalse((matrix.array - np.array([
-            [3.6e9, 0, 0, 0, 0, 0],
-            [-0.2 * 3.6e6, 1, 0, -2, 0, 0],
-            [0, 0, 1e4, 0, 0, 0],
-            [-0.1 * 3.6e6, 0, 0, 1, 0, 0],
-            [0, -10 * 0.6, -500 * 1e4 * 0.6, 0, 1170, 0],  # cycle, allocation
-            [0, -10 * 0.4, -500 * 1e4 * 0.4, 0, -50 * 0.4, 300],  # allocation
-        ])).any())
-
-    def test_biosphere_matrix__should_have_correct_domains(self):
-        database = model_fixture.database()
-        matrix = LcaSystem(database).biosphere_matrix
-
-        self.assertEqual(matrix.input_domain._indices, expected_activity_domain(database))
-        self.assertEqual(matrix.output_domain._indices, {
-            (database.name, database.version, 'carbon dioxide'): 0,
-            (database.name, database.version, 'dinitrogen monoxide'): 1,
-            (database.name, database.version, 'water'): 2,
-        })
-
-    def test_biosphere_matrix__should_have_correct_array(self):
-        database = model_fixture.database()
-        matrix = LcaSystem(database).biosphere_matrix
-
-        self.assertEqual(matrix.array.shape, (6, 3))
-        self.assertFalse((matrix.array - np.array([
-            [5, 0, 0],
-            [0, 0, 0],
-            [6, 0, 0],
-            [2, 0, 0],
-            [100 * 0.6, 5 * 0.6, 1500 * 0.6],  # allocation
-            [100 * 0.4, 5 * 0.4, 1500 * 0.4],  # allocation
-        ])).any())
-
-
-class _OperatorValidatorTest(TestCase):
+class OperatorValidatorTest(TestCase):
 
     def test_validate__when_compatible_operators__then_ok(self):
         key1, product1 = ('database', 'version' 'product 1'), Product('product 1', Quantity(1.0, kg), 1)
@@ -162,28 +37,166 @@ class _OperatorValidatorTest(TestCase):
             _OperatorValidator.validate(operator1, operator2)
 
 
-class TestOperatorChain(TestCase):
+class TestOperationDomain(TestCase):
 
-    def test_solve__when_supply__should_have_correct_domains(self):
-        system = LcaSystem(model_fixture.supply_database_fixture())
+    def test_supply(self):
+        database = model_fixture.complex_database()
+        system = System(database)
         matrix = OperatorChain(system).supply().solve()
 
         self.assertEqual(matrix.input_domain, system.technosphere_matrix.input_domain)
         self.assertEqual(matrix.output_domain, system.technosphere_matrix.output_domain)
 
-    #      A    B    C    D    E
-    # A    1    0    0    0    0
-    # B   -1    1    0    0    0
-    # C   -1   -200  4    0    0
-    # D   -1    0   -2   0.5   0
-    # E   -1000 0    0    0    1
-    def test_solve__when_supply__should_have_correct_array(self):
-        system = LcaSystem(model_fixture.supply_database_fixture())
+    def test_inventory(self):
+        system = System(model_fixture.complex_database())
+        matrix = OperatorChain(system).inventory().solve()
+
+        self.assertEqual(matrix.input_domain, system.biosphere_matrix.input_domain)
+        self.assertEqual(matrix.output_domain, system.biosphere_matrix.output_domain)
+
+
+class TestSystemWithUnitConversion(TestCase):
+
+    def test_biosphere(self):
+        database = model_fixture.simple_database_with_unit_conversions()
+        system = System(database)
+        matrix = system.biosphere_matrix.array
+        self.assertTrue(almost_equal(matrix, np.array([
+            [5],
+            [0.5]
+        ])))
+
+    def test_technosphere(self):
+        database = model_fixture.simple_database_with_unit_conversions()
+        system = System(database)
+        matrix = system.technosphere_matrix.array
+        self.assertTrue(almost_equal(matrix, np.array([
+            [500, -2],
+            [0, 1]
+        ])))
+
+    def test_supply(self):
+        database = model_fixture.simple_database_with_unit_conversions()
+        system = System(database)
+        matrix = OperatorChain(system).supply().solve().array
+        self.assertTrue(almost_equal(matrix, np.array([
+            [0, 2 / 500],
+            [0, 0]
+        ])))
+
+    def test_inventory(self):
+        database = model_fixture.simple_database_with_unit_conversions()
+        system = System(database)
+        matrix = OperatorChain(system).inventory().solve().array
+        self.assertTrue(almost_equal(matrix, np.array([
+            [(5 + 2 * 0.5) / 500],
+            [0.5]
+        ])))
+
+
+class TestSystemWithAllocation(TestCase):
+
+    def test_biosphere(self):
+        database = model_fixture.simple_database_with_allocation()
+        system = System(database)
+        matrix = system.biosphere_matrix.array
+        self.assertTrue(almost_equal(matrix, np.array([
+            [5 * 0.5],
+            [0.5]
+        ])))
+
+    def test_technosphere(self):
+        database = model_fixture.simple_database_with_allocation()
+        system = System(database)
+        matrix = system.technosphere_matrix.array
+        self.assertTrue(almost_equal(matrix, np.array([
+            [500, -1],
+            [0, 1]
+        ])))
+
+    def test_supply(self):
+        database = model_fixture.simple_database_with_allocation()
+        system = System(database)
+        matrix = OperatorChain(system).supply().solve().array
+        self.assertTrue(almost_equal(matrix, np.array([
+            [0, 2 / 500 * 0.5],
+            [0, 0]
+        ])))
+
+    def test_inventory(self):
+        database = model_fixture.simple_database_with_allocation()
+        system = System(database)
+        matrix = OperatorChain(system).inventory().solve().array
+        self.assertTrue(almost_equal(matrix, np.array([
+            [(5 + 2 * 0.5) / 500 * 0.5],
+            [0.5]
+        ])))
+
+
+class TestSystemWithCycle(TestCase):
+
+    def test_biosphere(self):
+        database = model_fixture.simple_database_with_cycle()
+        system = System(database)
+        matrix = system.biosphere_matrix.array
+        self.assertTrue(almost_equal(matrix, np.array([
+            [5],
+            [0.5]
+        ])))
+
+    def test_technosphere(self):
+        database = model_fixture.simple_database_with_cycle()
+        system = System(database)
+        matrix = system.technosphere_matrix.array
+        self.assertTrue(almost_equal(matrix, np.array([
+            [400, -2],
+            [0, 1]
+        ])))
+
+    def test_supply(self):
+        database = model_fixture.simple_database_with_cycle()
+        system = System(database)
+        matrix = OperatorChain(system).supply().solve().array
+        self.assertTrue(almost_equal(matrix, np.array([
+            [0, 2 / 400],
+            [0, 0]
+        ])))
+
+    def test_inventory(self):
+        database = model_fixture.simple_database_with_cycle()
+        system = System(database)
+        matrix = OperatorChain(system).inventory().solve().array
+        self.assertTrue(almost_equal(matrix, np.array([
+            [(5 + 2 * 0.5) / 400],
+            [0.5]
+        ])))
+
+
+class TestComplexSystem(TestCase):
+
+    def test_supply(self):
+        system = System(model_fixture.complex_database())
         matrix = OperatorChain(system).supply().solve()
+        amt_of_a_for_b = 4 * 3.6e6 * .75
+        real_amt_d = 3.6e9 * 0.5
         self.assertTrue(almost_equal(matrix.array, np.array([
-            [0, 0, 0, 0, 0],
-            [7.2e6, 0, 0, 0, 0],
-            [360900, 0.05, 0, 0, 0],
-            [2 * (2000 * 7.2e6 + 3.6e6) / 3.6e9, 2 * 2000 / 3.6e9, 0, 1, 0],
-            [3.6e9, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0],
+            [amt_of_a_for_b, 0, 0, 0, 0, 0],
+            [4 * 3.6e6 * .25, 0, 0, 0, 0, 0],
+            [(amt_of_a_for_b * 200 + 3.6e6) / 4e3, 200 / 4e3, 0, 0, 0, 0],
+            [(2e3 * amt_of_a_for_b + 3.6e6) / real_amt_d, 2e3 / real_amt_d, 0, 0, 1, 0],
+            [3.6e9, 0, 0, 0, 0, 0],
+        ])))
+
+    def test_inventory(self):
+        system = System(model_fixture.complex_database())
+        matrix = OperatorChain(system).inventory().solve()
+        s1_amt_for_b = (4 * 0.2 + .1) * .75
+        self.assertTrue(almost_equal(matrix.array, np.array([
+            [.2 / 3.6e6, 0, 0],
+            [s1_amt_for_b, 0, 0],
+            [(4 * 0.2 + .1) * .25, 0, 0],
+            [(s1_amt_for_b * 200 + .2) / 4e3, 0, 0],
+            [0, 0, 0],
+            [0.2 * 1e3, 0, 1e-3],
         ])))
