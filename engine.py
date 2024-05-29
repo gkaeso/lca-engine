@@ -83,15 +83,11 @@ class OperatorChain:
         self._operators = [_IdentityOperator(self._input_domain)]
 
     def supply(self) -> Self:
-        operator = _SupplyOperator(self._system.technosphere_matrix)
-        _OperatorValidator.validate(self._operators[-1], operator)
-        self._operators.append(operator)
+        self._add_operator(_SupplyOperator(self._system.technosphere_matrix))
         return self
 
     def inventory(self) -> Self:
-        operator = _InventoryOperator(self._system)
-        _OperatorValidator.validate(self._operators[-1], operator)
-        self._operators.append(operator)
+        self._add_operator(_InventoryOperator(self._system))
         return self
 
     def solve(self) -> Matrix:
@@ -99,10 +95,14 @@ class OperatorChain:
         return Matrix(rhs.input_domain, rhs.output_domain,
                       np.linalg.solve(self._system.technosphere_matrix.array, rhs.array))
 
-    def __len__(self) -> int:
-        return len(self._operators)
-
     def _combine_operators(self) -> Matrix:
         return reduce(lambda m1, m2: m1 * m2,
                       [operator.operate() for operator in self._operators[1:]],
                       self._operators[0].operate())
+
+    def _add_operator(self, operator: _Operator):
+        _OperatorValidator.validate(self._operators[-1], operator)
+        self._operators.append(operator)
+
+    def __len__(self) -> int:
+        return len(self._operators)
