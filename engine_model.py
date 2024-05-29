@@ -48,6 +48,8 @@ class Matrix:
     array: np.array
 
     def __mul__(self, other: Self) -> Self:
+        if self.output_domain is not other.input_domain:
+            raise ValueError(f'incompatible domains for matrix multiplication')
         return Matrix(self.input_domain, other.output_domain, np.dot(self.array, other.array))
 
 

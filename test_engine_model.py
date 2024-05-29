@@ -47,12 +47,10 @@ class TestMatrix(TestCase):
             [1.0, 2.0],
             [3.0, 0.5]
         ]))
-
         b = Matrix(self.domain1, self.domain2, np.array([
             [4.0, 2.0],
             [1.0, 2.0]
         ]))
-
         c = a * b
 
         self.assertEqual(c.input_domain, self.domain1)
@@ -63,15 +61,26 @@ class TestMatrix(TestCase):
             [1.0, 2.0],
             [3.0, 0.5]
         ]))
-
         b = Matrix(self.domain1, self.domain2, np.array([
             [4.0, 2.0],
             [1.0, 2.0]
         ]))
-
         c = a * b
 
         self.assertFalse((c.array - np.dot(a.array, b.array)).any())
+
+    def test_multiply__should_raise_when_incompatible_domains(self):
+        key1, product1 = ('database', 'version' 'product 1'), Product('product 1', Quantity(1.0, kg), 1)
+        key2, product2 = ('database', 'version' 'product 2'), Product('product 2', Quantity(5.0, kg), 1)
+
+        domain1 = Domain({key1: 1}, {key1: product1})
+        matrix1 = Matrix(domain1, domain1, np.array([]))
+
+        domain2 = Domain({key2: 2}, {key1: product1, key2: product2})
+        matrix2 = Matrix(domain2, domain2, np.array([]))
+
+        with self.assertRaises(ValueError):
+            matrix1 * matrix2
 
 
 class TestSystem(TestCase):

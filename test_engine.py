@@ -2,38 +2,9 @@ from unittest import TestCase
 
 import numpy as np
 
-from engine import System, Domain, OperatorChain, _Operator, _OperatorValidator
-from lca_model import Product
+from engine import System, OperatorChain
 from lca_model_fixture import *
 from test_utils import almost_equal
-
-
-class OperatorValidatorTest(TestCase):
-
-    def test_validate__when_compatible_operators__then_ok(self):
-        key1, product1 = ('database', 'version' 'product 1'), Product('product 1', Quantity(1.0, kg), 1)
-        key2, product2 = ('database', 'version' 'product 2'), Product('product 2', Quantity(5.0, kg), 1)
-
-        domain1 = Domain({key1: 1, key2: 2}, {key1: product1, key2: product2})
-        operator1 = _Operator(domain1, domain1)
-
-        try:
-            _OperatorValidator.validate(operator1, operator1)
-        except ValueError:
-            self.fail('should not raise exception')
-
-    def test_validate__when_incompatible_operators__then_exception(self):
-        key1, product1 = ('database', 'version' 'product 1'), Product('product 1', Quantity(1.0, kg), 1)
-        key2, product2 = ('database', 'version' 'product 2'), Product('product 2', Quantity(5.0, kg), 1)
-
-        domain1 = Domain({key1: 1}, {key1: product1})
-        operator1 = _Operator(domain1, domain1)
-
-        domain2 = Domain({key2: 2}, {key1: product1, key2: product2})
-        operator2 = _Operator(domain2, domain2)
-
-        with self.assertRaises(ValueError):
-            _OperatorValidator.validate(operator1, operator2)
 
 
 class TestOperationDomain(TestCase):
