@@ -1,9 +1,7 @@
 from unittest import TestCase
 
-from quantities import Quantity, kg
-
-import model_fixture
-from model import Product, Substance
+from lca_model import Product, Substance
+from lca_model_fixture import *
 
 
 class TestProduct(TestCase):
@@ -36,24 +34,5 @@ class TestSubstance(TestCase):
 class TestDatabase(TestCase):
 
     def test_key(self):
-        database = model_fixture.complex_realistic_database()
+        database = complex_realistic_database()
         self.assertEqual(database.key, (database.name, database.version))
-
-    def test_sorted_activities(self):
-        database = model_fixture.complex_realistic_database()
-        self.assertEqual([p.name for p in database.sorted_products()], [
-            'electricity',
-            'fertiliser',
-            'land transformation',
-            'phosphate, at mine',
-            'wheat grain',
-            'wheat straw',
-        ])
-
-    def test_sorted_substances(self):
-        database = model_fixture.complex_realistic_database()
-        self.assertEqual([s.name for s in database.sorted_substances()], [
-            'carbon dioxide',
-            'dinitrogen monoxide',
-            'water',
-        ])

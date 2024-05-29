@@ -1,7 +1,7 @@
 from quantities import Quantity, kg, m, ha, kWh, MWh, metric_ton, g, litre
 
-from model import Database
-from parser import parse
+from lca_model import Database
+from parser import DatabaseParser
 
 
 def database_as_dict() -> dict:
@@ -133,7 +133,7 @@ def database_as_dict() -> dict:
 
 
 def simple_database_with_unit_conversions() -> Database:
-    return parse({
+    return DatabaseParser.parse({
         ('database', 'version'): [
             {
                 'name': 'A',
@@ -177,7 +177,7 @@ def simple_database_with_unit_conversions() -> Database:
 
 
 def simple_database_with_allocation() -> Database:
-    return parse({
+    return DatabaseParser.parse({
         ('database', 'version'): [
             {
                 'name': 'A',
@@ -221,7 +221,7 @@ def simple_database_with_allocation() -> Database:
 
 
 def simple_database_with_cycle() -> Database:
-    return parse({
+    return DatabaseParser.parse({
         ('database', 'version'): [
             {
                 'name': 'A',
@@ -270,7 +270,7 @@ def simple_database_with_cycle() -> Database:
 
 
 def complex_database() -> Database:
-    return parse({
+    return DatabaseParser.parse({
         ('database', '1.0'): [
             {
                 'name': 'A',
@@ -393,4 +393,4 @@ def complex_database() -> Database:
 
 
 def complex_realistic_database() -> Database:
-    return parse(database_as_dict())
+    return DatabaseParser.parse(database_as_dict())

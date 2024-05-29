@@ -1,33 +1,31 @@
 from unittest import TestCase
 
-from quantities import Quantity, metric_ton, kg, ha, m
-
-import model_fixture
-from model import ExchangeType
-from parser import parse
+from lca_model import ExchangeType
+from lca_model_fixture import *
+from parser import DatabaseParser
 
 
 class TestParser(TestCase):
 
     def test_parse__should_parse_name(self):
-        database = parse(model_fixture.database_as_dict())
+        database = DatabaseParser.parse(database_as_dict())
         self.assertEqual(database.name, 'database')
 
     def test_parse__should_parse_version(self):
-        database = parse(model_fixture.database_as_dict())
+        database = DatabaseParser.parse(database_as_dict())
         self.assertEqual(database.version, '1.0')
 
     def test_parse__should_parse_activities(self):
-        database = parse(model_fixture.database_as_dict())
+        database = DatabaseParser.parse(database_as_dict())
         self.assertEqual(len(database.activities), 5)
 
     def test_parse__when_wheat__should_parse_name(self):
-        database = parse(model_fixture.database_as_dict())
+        database = DatabaseParser.parse(database_as_dict())
         activity = database.activities[0]
         self.assertEqual(activity.name, 'wheat')
 
     def test_parse__when_wheat__should_parse_products(self):
-        database = parse(model_fixture.database_as_dict())
+        database = DatabaseParser.parse(database_as_dict())
         activity = database.activities[0]
         self.assertEqual(len(activity.production), 2)
 
@@ -40,7 +38,7 @@ class TestParser(TestCase):
         self.assertEqual(product2.allocation, 0.4)
 
     def test_parse__when_wheat__should_parse_technosphere(self):
-        database = parse(model_fixture.database_as_dict())
+        database = DatabaseParser.parse(database_as_dict())
         activity = database.activities[0]
         self.assertEqual(len(activity.technosphere), 3)
 
@@ -53,7 +51,7 @@ class TestParser(TestCase):
         self.assertEqual(exchange3.quantity, Quantity(10, kg))
 
     def test_parse__when_wheat__should_parse_biosphere(self):
-        database = parse(model_fixture.database_as_dict())
+        database = DatabaseParser.parse(database_as_dict())
         activity = database.activities[0]
         self.assertEqual(len(activity.biosphere), 3)
 

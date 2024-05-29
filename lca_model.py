@@ -82,12 +82,3 @@ class Database:
     @property
     def key(self) -> tuple[str, str]:
         return self.name, self.version
-
-    def sorted_products(self) -> list[Product]:
-        return sorted([p for a in self.activities for p in a.production], key=lambda p: p.name)
-
-    def sorted_substances(self) -> list[Substance]:
-        substances: set[Substance] = set()
-        for activity in self.activities:
-            substances.update([Substance(b.name) for b in activity.biosphere])
-        return sorted(substances, key=lambda s: s.name)

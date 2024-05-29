@@ -1,11 +1,11 @@
 from unittest import TestCase
 
 import numpy as np
-from quantities import Quantity, kg
 
-import model_fixture
 from engine import System, Domain, Matrix
-from model import Product, Database
+from engine_model import _sorted_products, _sorted_substances
+from lca_model import Product
+from lca_model_fixture import *
 
 
 class TestDomain(TestCase):
@@ -88,14 +88,14 @@ class TestSystem(TestCase):
         }
 
     def test_technosphere_domain(self):
-        database = model_fixture.complex_database()
+        database = complex_database()
         matrix = System(database).technosphere_matrix
 
         self.assertEqual(matrix.input_domain, matrix.output_domain)
         self.assertEqual(matrix.input_domain._indices, self.expected_activity_domain(database))
 
     def test_technosphere_array(self):
-        database = model_fixture.complex_database()
+        database = complex_database()
         matrix = System(database).technosphere_matrix
 
         self.assertFalse((matrix.array - np.array([
@@ -108,7 +108,7 @@ class TestSystem(TestCase):
         ])).any())
 
     def test_biosphere_domain(self):
-        database = model_fixture.complex_database()
+        database = complex_database()
         matrix = System(database).biosphere_matrix
 
         self.assertEqual(matrix.input_domain._indices, self.expected_activity_domain(database))
@@ -119,7 +119,7 @@ class TestSystem(TestCase):
         })
 
     def test_biosphere_array(self):
-        database = model_fixture.complex_database()
+        database = complex_database()
         matrix = System(database).biosphere_matrix
 
         self.assertEqual(matrix.array.shape, (6, 3))
@@ -131,3 +131,24 @@ class TestSystem(TestCase):
             [0, 1, 0],
             [0, 0, 1e-3],  # allocation
         ])).any())
+
+
+class TestFunctions(TestCase):
+    def test_sorted_activities(self):
+        database = complex_realistic_database()
+        self.assertEqual([p.name for p in _sorted_products(database)], [
+            'electricity',
+            'fertiliser',
+            'land transformation',
+            'phosphate, at mine',
+            'wheat grain',
+            'wheat straw',
+        ])
+
+    def test_sorted_substances(self):
+        database = complex_realistic_database()
+        self.assertEqual([s.name for s in _sorted_substances(database)], [
+            'carbon dioxide',
+            'dinitrogen monoxide',
+            'water',
+        ])
