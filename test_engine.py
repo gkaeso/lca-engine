@@ -3,6 +3,8 @@ from unittest import TestCase
 import numpy as np
 
 from engine import System, OperatorChain
+from engine_model import _method_matrix
+from lca_model import Method, Indicator
 from lca_model_fixture import *
 from test_utils import almost_equal
 
@@ -23,6 +25,17 @@ class TestOperationDomain(TestCase):
 
         self.assertEqual(matrix.input_domain, system.biosphere_matrix.input_domain)
         self.assertEqual(matrix.output_domain, system.biosphere_matrix.output_domain)
+
+    def test_impact(self):
+        system = System(complex_database())
+        indicator1 = Indicator('indicator 1', 'kg', [])
+        indicator2 = Indicator('indicator 2', 'm2', [])
+        method = Method('method', [indicator1, indicator2])
+        factor_matrix = _method_matrix(method, system.biosphere_matrix.output_domain)
+        matrix = OperatorChain(system).inventory().impact(factor_matrix).solve()
+
+        self.assertEqual(matrix.input_domain, system.biosphere_matrix.input_domain)
+        self.assertEqual(matrix.output_domain, factor_matrix.output_domain)
 
 
 class TestSystemWithUnitConversion(TestCase):
@@ -63,6 +76,12 @@ class TestSystemWithUnitConversion(TestCase):
             [0.5]
         ])))
 
+    def test_impact(self):
+        database = simple_database_with_unit_conversions()
+        system = System(database)
+        matrix = OperatorChain(system).inventory().solve().array
+        self.fail()
+
 
 class TestSystemWithAllocation(TestCase):
 
@@ -101,6 +120,12 @@ class TestSystemWithAllocation(TestCase):
             [(5 + 2 * 0.5) / 500 * 0.5],
             [0.5]
         ])))
+
+    def test_impact(self):
+        database = simple_database_with_allocation()
+        system = System(database)
+        matrix = OperatorChain(system).inventory().solve().array
+        self.fail()
 
 
 class TestSystemWithCycle(TestCase):
@@ -141,6 +166,12 @@ class TestSystemWithCycle(TestCase):
             [0.5]
         ])))
 
+    def test_impact(self):
+        database = simple_database_with_cycle()
+        system = System(database)
+        matrix = OperatorChain(system).inventory().solve().array
+        self.fail()
+
 
 class TestComplexSystem(TestCase):
 
@@ -170,3 +201,9 @@ class TestComplexSystem(TestCase):
             [0, 0, 0],
             [0.2 * 1e3, 0, 1e-3],
         ])))
+
+    def test_impact(self):
+        system = System(complex_database())
+        matrix = OperatorChain(system).inventory().solve()
+        s1_amt_for_b = (4 * 0.2 + .1) * .75
+        self.fail()

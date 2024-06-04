@@ -5,11 +5,12 @@ from typing import Self
 
 import numpy as np
 
-from lca_model import Database, Product, Substance
+from lca_model import Database, Product, Substance, Method, Indicator
 
-type Characterizable = Product | Substance
+type Characterizable = Product | Substance | Indicator
 type ProductKey = namedtuple('ProductKey', ['database', 'version', 'name'])
-type Key = ProductKey
+type MethodKey = namedtuple('MethodKey', ['method', 'name'])
+type Key = ProductKey | MethodKey
 
 
 class Domain:
@@ -31,11 +32,10 @@ class Domain:
         return len(self._indices)
 
 
-def _domain_from(database: Database, func: executable) -> Domain:
+def _domain_from(characterizables: list[Characterizable], to_key: executable) -> Domain:
     indices, elements = {}, {}
-    objects = func(database)
-    for obj, index in zip(objects, range(len(objects))):
-        key: Key = (database.name, database.version, obj.name)
+    for index, obj in enumerate(characterizables):
+        key: Key = to_key(obj)
         indices[key] = index
         elements[key] = obj
     return Domain(indices, elements)
@@ -87,14 +87,26 @@ def _sorted_substances(database: Database) -> list[Substance]:
     return sorted(substances, key=lambda s: s.name)
 
 
+def _sorted_indicators(method: Method) -> list[Indicator]:
+    return sorted([i for i in method.indicators], key=lambda i: i.name)
+
+
 class System:
     biosphere_matrix: Matrix
     technosphere_matrix: Matrix
 
     def __init__(self, database: Database):
-        product_domain = _domain_from(database, lambda db: _sorted_products(db))
-        substance_domain = _domain_from(database, lambda db: _sorted_substances(db))
+        product_domain = _domain_from(_sorted_products(database),
+                                      lambda product: (database.name, database.version, product.name))
+        substance_domain = _domain_from(_sorted_substances(database),
+                                        lambda substance: (database.name, database.version, substance.name))
 
         biosphere_array, technosphere_array = _arrays(database, product_domain, substance_domain)
         self.biosphere_matrix = Matrix(product_domain, substance_domain, biosphere_array)
         self.technosphere_matrix = Matrix(product_domain, product_domain, technosphere_array)
+
+
+def _method_matrix(method: Method, substance_domain: Domain) -> Matrix:
+    output_domain = _domain_from(_sorted_indicators(method),
+                                 lambda indicator: (method.name, indicator.name))
+    return Matrix(substance_domain, output_domain, np.random.random((len(substance_domain), len(output_domain))))

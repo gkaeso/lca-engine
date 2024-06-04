@@ -5,23 +5,41 @@ from quantities import Quantity
 
 
 @dataclass
-class CharacterizationFactor:
-    compartment: str
-    sub_compartment: str
-    quantity: Quantity
-
-
-@dataclass
 class Substance:
     name: str
-
-    # kfactors: list[CharacterizationFactor]
 
     def __hash__(self) -> int:
         return hash(self.name)
 
     def __eq__(self, other) -> bool:
         return isinstance(other, Substance) and hash(self) == hash(other)
+
+
+@dataclass
+class CharacterizationFactor:
+    substance: Substance
+    compartment: str
+    sub_compartment: str
+    quantity: Quantity
+
+    def __hash__(self) -> int:
+        return hash(f'{self.substance.name}|{self.compartment}|{self.sub_compartment}')
+
+    def __eq__(self, other) -> bool:
+        return isinstance(other, CharacterizationFactor) and hash(self) == hash(other)
+
+
+@dataclass
+class Indicator:
+    name: str
+    unit: str
+    factors: list[CharacterizationFactor]
+
+
+@dataclass
+class Method:
+    name: str
+    indicators: list[Indicator]
 
 
 class ExchangeType(Enum):

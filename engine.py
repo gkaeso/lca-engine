@@ -63,6 +63,18 @@ class _InventoryOperator(_Operator):
         return self._biosphere_matrix
 
 
+class _ImpactOperator(_Operator):
+    _factor_matrix: Matrix
+
+    def __init__(self, factor_matrix: Matrix):
+        super().__init__(factor_matrix.input_domain, factor_matrix.output_domain)
+        self._factor_matrix = factor_matrix
+
+    @override
+    def operate(self) -> Matrix:
+        return self._factor_matrix
+
+
 class OperatorChain:
     _system: System
     _input_domain: Domain
@@ -81,6 +93,10 @@ class OperatorChain:
 
     def inventory(self) -> Self:
         self._operators.append(_InventoryOperator(self._system))
+        return self
+
+    def impact(self, factor_matrix: Matrix) -> Self:
+        self._operators.append(_ImpactOperator(factor_matrix))
         return self
 
     def solve(self) -> Matrix:

@@ -3,8 +3,8 @@ from unittest import TestCase
 import numpy as np
 
 from engine import System, Domain, Matrix
-from engine_model import _sorted_products, _sorted_substances
-from lca_model import Product
+from engine_model import _sorted_products, _sorted_substances, _sorted_indicators
+from lca_model import Product, Method, Indicator
 from lca_model_fixture import *
 
 
@@ -143,6 +143,7 @@ class TestSystem(TestCase):
 
 
 class TestFunctions(TestCase):
+
     def test_sorted_activities(self):
         database = complex_realistic_database()
         self.assertEqual([p.name for p in _sorted_products(database)], [
@@ -160,4 +161,13 @@ class TestFunctions(TestCase):
             'carbon dioxide',
             'dinitrogen monoxide',
             'water',
+        ])
+
+    def test_sorted_indicators(self):
+        climate_change = Indicator('climate change', 'kg CO2 eq', [])
+        ozone_radiation = Indicator('ozone radiation', 'Bq eq', [])
+        method = Method('method', [ozone_radiation, climate_change])
+        self.assertEqual([s.name for s in _sorted_indicators(method)], [
+            climate_change.name,
+            ozone_radiation.name
         ])
