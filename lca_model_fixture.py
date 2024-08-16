@@ -1,6 +1,6 @@
 from quantities import Quantity, kg, m, ha, kWh, MWh, metric_ton, g, litre
 
-from lca_model import Database
+from lca_model import Database, Method, Indicator, CharacterizationFactor, Substance
 from parser import DatabaseParser
 
 
@@ -394,3 +394,14 @@ def complex_database() -> Database:
 
 def complex_realistic_database() -> Database:
     return DatabaseParser.parse(database_as_dict())
+
+
+def method() -> Method:
+    carbon_dioxide = Substance('carbon dioxide')
+    indicator1 = Indicator('indicator 1', 'kgCO2eq', [
+        CharacterizationFactor(carbon_dioxide, 'air', 'unspecified', Quantity(2, 'kg/kg')),  # kgCO2eq/kg
+    ])
+    indicator2 = Indicator('indicator 2', 'm2', [
+        CharacterizationFactor(carbon_dioxide, 'air', 'unspecified', Quantity(0, 'kg/kg')),  # kgCO2eq/kg
+    ])
+    return Method('method', [indicator1, indicator2])

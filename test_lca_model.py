@@ -1,23 +1,27 @@
 from unittest import TestCase
 
-from lca_model import Product, Substance
+from lca_model import Product
 from lca_model_fixture import *
 
 
 class TestProduct(TestCase):
 
     def test_hashable(self):
-        product = Product('product', Quantity(1.0, kg), 1.0)
+        product = Product('product', Quantity(1.0, kg), 1.0, ())
         self.assertEqual({product, product}, {product})
 
     def test_equal(self):
-        self.assertEqual(Product('product', Quantity(1.0, kg), 1.0),
-                         Product('product', Quantity(1.0, kg), 1.0))
+        self.assertEqual(Product('product', Quantity(1.0, kg), 1.0, ()),
+                         Product('product', Quantity(1.0, kg), 1.0, ()))
+
+    def test_equal__when_different_database(self):
+        self.assertNotEqual(Product('product', Quantity(1.0, kg), 1.0, ('database', '1')),
+                            Product('product', Quantity(1.0, kg), 1.0, ('database', '2')))
 
     def test_equal__when_same_hash_but_different_type(self):
         substance = Substance('name')
-        product = Product('name', Quantity(1.0, kg), 1.0)
-        self.assertEqual(hash(substance), hash(product))
+        product = Product('name', Quantity(1.0, kg), 1.0, ())
+        self.assertEqual(hash(substance), hash('name'))
         self.assertNotEqual(product, substance)
 
 

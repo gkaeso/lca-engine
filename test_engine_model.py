@@ -4,7 +4,7 @@ import numpy as np
 
 from engine import System, Domain, Matrix
 from engine_model import _sorted_products, _sorted_substances, _sorted_indicators
-from lca_model import Product, Method, Indicator
+from lca_model import Product
 from lca_model_fixture import *
 
 
@@ -13,8 +13,8 @@ class TestDomain(TestCase):
     def test_indexed_elements(self):
         database = Database('name', '1.0', [])
 
-        product1 = Product('product 1', Quantity(1.0, kg), 0.9)
-        product2 = Product('product 2', Quantity(3.0, kg), 1.0)
+        product1 = Product('product 1', Quantity(1.0, kg), 0.9, ())
+        product2 = Product('product 2', Quantity(3.0, kg), 1.0, ())
 
         key1 = (*database.key, product1.name)
         key2 = (*database.key, product2.name)
@@ -28,9 +28,9 @@ class TestDomain(TestCase):
 class TestMatrix(TestCase):
     database = Database('name', '1.0', [])
 
-    product1 = Product('product 1', Quantity(1.0, kg), 0.9)
-    product2 = Product('product 2', Quantity(3.0, kg), 1.0)
-    product3 = Product('product 3', Quantity(5.0, kg), 2.0)
+    product1 = Product('product 1', Quantity(1.0, kg), 0.9, ())
+    product2 = Product('product 2', Quantity(3.0, kg), 1.0, ())
+    product3 = Product('product 3', Quantity(5.0, kg), 2.0, ())
 
     key1 = (*database.key, product1.name)
     key2 = (*database.key, product2.name)
@@ -70,8 +70,8 @@ class TestMatrix(TestCase):
         self.assertFalse((c.array - np.dot(a.array, b.array)).any())
 
     def test_multiply__should_raise_when_incompatible_domains(self):
-        key1, product1 = ('database', 'version' 'product 1'), Product('product 1', Quantity(1.0, kg), 1)
-        key2, product2 = ('database', 'version' 'product 2'), Product('product 2', Quantity(5.0, kg), 1)
+        key1, product1 = ('database', 'version' 'product 1'), Product('product 1', Quantity(1.0, kg), 1, ())
+        key2, product2 = ('database', 'version' 'product 2'), Product('product 2', Quantity(5.0, kg), 1, ())
 
         domain1 = Domain({key1: 1}, {key1: product1})
         matrix1 = Matrix(domain1, domain1, np.array([]))
@@ -88,12 +88,12 @@ class TestSystem(TestCase):
     @staticmethod
     def expected_activity_domain(database):
         return {
-            (*database.key, 'A'): 0,
-            (*database.key, 'B'): 1,
-            (*database.key, 'B2'): 2,
-            (*database.key, 'C'): 3,
-            (*database.key, 'D'): 4,
-            (*database.key, 'E'): 5
+            (database.key, 'A'): 0,
+            (database.key, 'B'): 1,
+            (database.key, 'B2'): 2,
+            (database.key, 'C'): 3,
+            (database.key, 'D'): 4,
+            (database.key, 'E'): 5
         }
 
     def test_technosphere_domain(self):
@@ -122,9 +122,9 @@ class TestSystem(TestCase):
 
         self.assertEqual(matrix.input_domain._indices, self.expected_activity_domain(database))
         self.assertEqual(matrix.output_domain._indices, {
-            (database.name, database.version, 'S1'): 0,
-            (database.name, database.version, 'S2'): 1,
-            (database.name, database.version, 'S3'): 2,
+            'S1': 0,
+            'S2': 1,
+            'S3': 2,
         })
 
     def test_biosphere_array(self):

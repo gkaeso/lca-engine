@@ -1,23 +1,19 @@
-from collections import namedtuple
 from dataclasses import dataclass
-from sys import executable
 from typing import Self
 
 import numpy as np
 
-from lca_model import Database, Product, Substance, Method, Indicator
+from lca_model import Database, Product, Substance, Method, Indicator, ProductKey
 
 type Characterizable = Product | Substance | Indicator
-type ProductKey = namedtuple('ProductKey', ['database', 'version', 'name'])
-type MethodKey = namedtuple('MethodKey', ['method', 'name'])
-type Key = ProductKey | MethodKey
+type CharacterizableKey = ProductKey | str
 
 
 class Domain:
-    _indices: dict[ProductKey, int]
-    _elements: dict[ProductKey, Characterizable]
+    _indices: dict[CharacterizableKey, int]
+    _elements: dict[CharacterizableKey, Characterizable]
 
-    def __init__(self, indices: dict[ProductKey, int], elements: dict[ProductKey, Characterizable]):
+    def __init__(self, indices: dict[CharacterizableKey, int], elements: dict[CharacterizableKey, Characterizable]):
         self._indices = indices
         self._elements = elements
 
@@ -25,17 +21,17 @@ class Domain:
     def indexed_elements(self) -> list[tuple[int, Characterizable]]:
         return [(self._indices[key], self._elements[key]) for key in self._indices.keys()]
 
-    def index(self, key: ProductKey) -> int:
+    def index(self, key: CharacterizableKey) -> int:
         return self._indices[key]
 
     def __len__(self) -> int:
         return len(self._indices)
 
 
-def _domain_from(characterizables: list[Characterizable], to_key: executable) -> Domain:
+def _domain_from(characterizables: list[Characterizable]) -> Domain:
     indices, elements = {}, {}
     for index, obj in enumerate(characterizables):
-        key: Key = to_key(obj)
+        key: CharacterizableKey = obj.key
         indices[key] = index
         elements[key] = obj
     return Domain(indices, elements)
@@ -62,7 +58,7 @@ def _arrays(database: Database, product_domain: Domain, substance_domain: Domain
                                                                  for activity in database.activities
                                                                  for product in activity.production]:
 
-        row = product_domain.index((database.name, database.version, product.name))
+        row = product_domain.index(product.key)
 
         for exchange in biosphere_exchanges:
             col = substance_domain.index((database.name, database.version, exchange.name))
@@ -96,10 +92,8 @@ class System:
     technosphere_matrix: Matrix
 
     def __init__(self, database: Database):
-        product_domain = _domain_from(_sorted_products(database),
-                                      lambda product: (database.name, database.version, product.name))
-        substance_domain = _domain_from(_sorted_substances(database),
-                                        lambda substance: (database.name, database.version, substance.name))
+        product_domain = _domain_from(_sorted_products(database))
+        substance_domain = _domain_from(_sorted_substances(database))
 
         biosphere_array, technosphere_array = _arrays(database, product_domain, substance_domain)
         self.biosphere_matrix = Matrix(product_domain, substance_domain, biosphere_array)
@@ -107,6 +101,11 @@ class System:
 
 
 def _method_matrix(method: Method, substance_domain: Domain) -> Matrix:
-    output_domain = _domain_from(_sorted_indicators(method),
-                                 lambda indicator: (method.name, indicator.name))
-    return Matrix(substance_domain, output_domain, np.random.random((len(substance_domain), len(output_domain))))
+    indicator_domain = _domain_from(_sorted_indicators(method))
+    array = np.zeros((len(substance_domain), len(indicator_domain)), dtype=np.float64)
+    for indicator in method.indicators:
+        for factor in indicator.factors:
+            row = substance_domain.index(factor.substance.key)
+            col = indicator_domain.index(indicator.key)
+            array[row][col] += factor.quantity.simplified
+    return Matrix(substance_domain, indicator_domain, array)
